@@ -1,7 +1,7 @@
 import express from 'express';
 import path from 'node:path';
 import { createServer as createViteServer } from 'vite';
-import { createApiRouter } from './api/_router.ts';
+import { createApiRouter } from './api/_router.js';
 
 const PORT = Number(process.env.PORT || 3000);
 const ROOT = process.cwd();

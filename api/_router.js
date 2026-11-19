@@ -1,72 +1,13 @@
-import express, { Router } from 'express';
+import express from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-
-interface CustomerRecord {
-  id: string;
-  name: string;
-  phone: string;
-  email: string;
-  created_at: string;
-}
-
-interface BikeRecord {
-  id: string;
-  customer_id: string | null;
-  brand: string;
-  model: string;
-  category: string;
-  color: string;
-  serial: string;
-  notes: string;
-}
-
-interface RequestRecord {
-  id: string;
-  customer_id: string;
-  bike_id: string;
-  kind: string;
-  message: string;
-  status: string;
-  created_at: string;
-}
-
-interface OrderRecord {
-  id: string;
-  number: number;
-  customer_id: string | null;
-  bike_id: string | null;
-  problem: string;
-  mechanic: string;
-  status: string;
-  total: number;
-  created_at: string;
-}
-
-interface ProductRecord {
-  id: string;
-  name: string;
-  sku: string;
-  category: string;
-  quantity: number;
-  min_quantity: number;
-  price: number;
-}
-
-interface DatabaseState {
-  customers: CustomerRecord[];
-  bikes: BikeRecord[];
-  requests: RequestRecord[];
-  orders: OrderRecord[];
-  products: ProductRecord[];
-}
 
 const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
 const DATA_DIR = isServerless ? '/tmp' : process.cwd();
 const DATA_FILE = path.join(DATA_DIR, 'valebike-data.json');
 
-function defaultSeedState(): DatabaseState {
+function defaultSeedState() {
   return {
     customers: [],
     bikes: [],
@@ -122,16 +63,25 @@ function defaultSeedState(): DatabaseState {
   };
 }
 
-let memoryState: DatabaseState | null = null;
+let memoryState = null;
 
-function readState(): DatabaseState {
+function writeState(state) {
+  memoryState = state;
+  try {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(state, null, 2), 'utf-8');
+  } catch {
+    // Keep state in memory when filesystem is read-only
+  }
+}
+
+function readState() {
   if (memoryState) {
     return memoryState;
   }
   try {
     if (fs.existsSync(DATA_FILE)) {
       const raw = fs.readFileSync(DATA_FILE, 'utf-8');
-      const parsed = JSON.parse(raw) as Partial<DatabaseState>;
+      const parsed = JSON.parse(raw);
       memoryState = {
         customers: Array.isArray(parsed.customers) ? parsed.customers : [],
         bikes: Array.isArray(parsed.bikes) ? parsed.bikes : [],
@@ -145,7 +95,7 @@ function readState(): DatabaseState {
       return memoryState;
     }
   } catch {
-    // Fallback to initial seed state when filesystem cannot be read
+    // Fallback to initial seed state
   }
 
   memoryState = defaultSeedState();
@@ -153,20 +103,11 @@ function readState(): DatabaseState {
   return memoryState;
 }
 
-function writeState(state: DatabaseState): void {
-  memoryState = state;
-  try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(state, null, 2), 'utf-8');
-  } catch {
-    // In restricted read-only environments, keep state in memory without crashing
-  }
-}
-
-function nowIso(): string {
+function nowIso() {
   return new Date().toISOString();
 }
 
-export function createApiRouter(): Router {
+export function createApiRouter() {
   const router = express.Router();
   router.use(express.json());
 

@@ -1,0 +1,6 @@
+{
+  "name": "Vale Bike",
+  "description": "Vitrine pública e painel operacional de oficina, peças e bicicletas para a Vale Bike em Registro, SP.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
